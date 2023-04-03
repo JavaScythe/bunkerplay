@@ -1,0 +1,22 @@
+<title>EmulatorJS Netplay demo</title>
+
+<link rel=icon href=docs/favicon.ico sizes="16x16 32x32 48x48 64x64" type=image/vnd.microsoft.icon>
+<meta name=viewport content="width = device-width, initial-scale = 1">
+<div style='width:600px;height:480px;max-width:100%'>
+	<div id='game' tabindex="0"></div>
+</div>
+<canvas id="resizer" style="display: none;" height="150" width="187"></canvas>
+<button onclick="connect();">Connect</button>
+<pre id="msgs">
+
+
+
+
+</pre>
+<input tabindex="1" type="horrible" id="monkey">
+<input type="range" min="100" max="800" id="qSlid" value="300" onchange="qtip();"><pre id="num"></pre>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"
+	integrity="sha384-/KNQL8Nu5gCHLqwqfQjA689Hhoqgi2S84SNUxC3roTe4EhJ9AfLkp8QiQcU8AMzI"
+	crossorigin="anonymous"></script>
+<script src="script.js"></script>
+<script src="/data/loader.js"></script>
