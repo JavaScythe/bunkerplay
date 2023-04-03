@@ -9,6 +9,29 @@ const io = require("socket.io")(server, {
 		methods: ["GET", "POST"]
 	}
 });
+const WebSocket = require('ws');
+const { randomUUID } = require('crypto');
+const wss = new WebSocket.Server({
+	server: server,
+	path: "/ws"
+});
+let debug = true;
+function broadCast(message, ws) {
+	wss.clients.forEach(function each(client) {
+		if (client !== ws && client.readyState === WebSocket.OPEN) {
+			if(debug) console.log("Emitting: " + JSON.stringify(message));
+			client.send(JSON.stringify(message));
+		}
+	});
+};
+function narrowCast(message, ws) {
+	wss.clients.forEach(function each(client) {
+		if (client === ws && client.readyState === WebSocket.OPEN) {
+			if(debug) console.log("Emitting: " + JSON.stringify(message));
+			client.send(JSON.stringify(message));
+		}
+	});
+}
 let users = {};
 let pnm = 0;
 const filenames = [
@@ -41,115 +64,143 @@ app.use((req, res, next) => {
 	res.header("Access-Control-Allow-Origin", "*");
 	res.sendFile(path.join(__dirname + req.path));
 });
-io.on('connection', (socket) => {
-	console.log("User " + socket["id"] + " Connected");
-	socket.on("mode", (mode) => {
-		if (mode.type == "host") {
-			for (let i in users) {
-				if (users[i].mode == "host") {
-					io.to(socket.id).emit("mode", {
+wss.on('connection', function connection(ws) {
+	ws.id = randomUUID();
+	if(debug) console.log("New connection: " + ws.id);
+	ws.on("close", function close(){
+		if(users[ws.id] != undefined){
+			delete users[ws.id];
+		}
+	});
+	ws.on('message', function incoming(message) {
+		if(debug) console.log("Received: " + message);
+		try{
+			message = JSON.parse(message);
+		}catch(e){
+			console.log("Error parsing JSON: " + e);
+		}
+		if (message.type == "mode") {
+			if (message.mode == "host") {
+				for (let i in users) {
+					if (users[i].mode == "host") {
+						narrowCast({
+							"type": "uauthCallback",
+							"new": false,
+							"player": -1,
+							"message": `Already a host`
+						}, ws);
+						return false;
+					}
+				}
+				users[ws.id] = {};
+				users[ws.id].mode = "host";
+				//send response that user is authenticated
+				narrowCast({
+					"type": "uauthCallback",
+					"new": true,
+					"message": `Authenticated as host`
+				}, ws);
+				return true;
+			}
+			if (users[ws.id] == undefined) {
+				let tkn = [];
+				for (let i in users) {
+					if (users[i].mode != "host") {
+						tkn.push(users[i].player);
+					}
+				}
+				let playerNumber = undefined;
+				for (let i = 2; i < 5; i++) {
+					if (tkn.indexOf(i) == -1) {
+						playerNumber = i;
+						break;
+					}
+				}
+				if (playerNumber == undefined) {
+					narrowCast({
 						"type": "uauthCallback",
 						"new": false,
 						"player": -1,
-						"message": `Already a host`
-					});
+						"message": `Already 4 players`
+					}, ws);
 					return false;
 				}
-			}
-			users[socket.id] = {};
-			users[socket.id].mode = "host";
-		}
-		if (users[socket.id] == undefined) {
-			let tkn = [];
-			for (let i in users) {
-				if (users[i].mode != "host") {
-					tkn.push(users[i].player);
-				}
-			}
-			let playerNumber = undefined;
-			for (let i = 2; i < 5; i++) {
-				if (tkn.indexOf(i) == -1) {
-					playerNumber = i;
-					break;
-				}
-			}
-			if (playerNumber == undefined) {
-				io.to(socket.id).emit("mode", {
+				users[ws.id] = {};
+				users[ws.id].mode = "player";
+				users[ws.id].player = playerNumber;
+				narrowCast({
+					"type": "uauthCallback",
+					"new": true,
+					"player": users[ws.id].player,
+					"message": `Registered as player ${users[ws.id].player}`
+				}, ws);
+			} else {
+				narrowCast({
 					"type": "uauthCallback",
 					"new": false,
-					"player": -1,
-					"message": `Already 4 players`
-				});
-				return false;
+					"player": users[ws.id].player,
+					"message": `You're already registered as player ${users[ws.id].player}`
+				}, ws);
 			}
-			users[socket.id] = {};
-			users[socket.id].mode = "player";
-			users[socket.id].player = playerNumber;
-			io.to(socket.id).emit("mode", {
-				"type": "uauthCallback",
-				"new": true,
-				"player": users[socket.id].player,
-				"message": `Registered as player ${users[socket.id].player}`
-			});
-		} else {
-			io.to(socket.id).emit("mode", {
-				"type": "uauthCallback",
-				"new": false,
-				"player": users[socket.id].player,
-				"message": `You're already registered as player ${users[socket.id].player}`
-			});
 		}
-	});
-	socket.on('disconnect', () => {
-		console.log("User " + socket["id"] + " Disconnected");
-		if (users[socket.id] != undefined) {
-			delete users[socket.id];
-		}
-	});
-});
-io.on('connection', (socket) => {
-	socket.on('screen', (msg) => {
-		if (users[socket.id] != undefined) {
-			if (users[socket.id].mode == "host") {
-				if((new Date().getTime() - msg.time) > 200){
-					return false;
-				}
-				for (let i in users) {
-					if (users[i].mode == "player") {
-						io.to(i).emit("screen", msg.screen);
+		if (message.type == "screen") {
+			if (users[ws.id] != undefined) {
+				if (users[ws.id].mode == "host") {
+					if((new Date().getTime() - message.time) > 200){
+						return false;
+					}
+					for (let i in users) {
+						if (users[i].mode == "player") {
+							wss.clients.forEach(function each(client) {
+								if (client.readyState === WebSocket.OPEN) {
+									client.send(JSON.stringify({
+										"type": "screen",
+										"screen": message.screen
+									}));
+								}
+							});
+						}
 					}
 				}
 			}
 		}
-		//console.log(msg.length);
-	});
-	socket.on('keypress', (msg) => {
-		if (users[socket.id] != undefined) {
-			let p = users[socket.id].player;
-			if (keybinds.indexOf(msg.code + "") == -1) {
-				return false;
-			}
-			let c = keybinds.indexOf(msg.code + "") + 1 + (7 * p - 2);
-			c += 256;
-			console.log(p + ":" + msg.code + ":" + c);
-			for (let i in users) {
-				if (users[i].mode == "host") {
-					io.to(i).emit("keypress", {
-						"type": msg.type,
-						"code": c
-					});
+		if (message.type == "keypress") {
+			if (users[ws.id] != undefined) {
+				let p = users[ws.id].player;
+				if (keybinds.indexOf(message.code + "") == -1) {
+					return false;
+				}
+				let c = keybinds.indexOf(message.code + "") + 1 + (7 * p - 2);
+				c += 256;
+				console.log(p + ":" + message.code + ":" + c);
+				for (let i in users) {
+					if (users[i].mode == "host") {
+						wss.clients.forEach(function each(client) {
+							if (client.readyState === WebSocket.OPEN) {
+								client.send(JSON.stringify({
+
+									"type": "keypress",
+									"mode": message.mode,
+									"code": c
+								}));
+							}
+						});
+					}
 				}
 			}
 		}
-		//console.log(msg);
-	});
-	socket.on("message", (msg) => {
-		console.log("got msg");
-		if (users[socket.id] != undefined) {
-			let p = users[socket.id].player || "H1";
-			if(p[0]!="H")p="P"+p;
-			for (let i in users) {
-				io.to(i).emit("message", "["+p+"] "+msg);
+		if (message.type == "message") {
+			if (users[ws.id] != undefined) {
+				let p = users[ws.id].player || "H1";
+				if(p[0]!="H")p="P"+p;
+				wss.clients.forEach(function each(client) {
+					if (client.readyState === WebSocket.OPEN) {
+						client.send(JSON.stringify({
+							"type": "message",
+							"message": "["+p+"] "+message.message
+						}));
+					}
+				});
 			}
 		}
 	});

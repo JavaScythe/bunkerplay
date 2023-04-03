@@ -1,6 +1,3 @@
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"
-	integrity="sha384-/KNQL8Nu5gCHLqwqfQjA689Hhoqgi2S84SNUxC3roTe4EhJ9AfLkp8QiQcU8AMzI"
-	crossorigin="anonymous"></script>
 <img src="" id="frame" height="480px" width="600px">
 <pre id="user"></pre>
 <button onclick="register();">connect to game</button>
@@ -13,42 +10,55 @@
 <input type="horrible" id="monkey">
 
 <script>
-	var socket = io("/");
+	var ws = new WebSocket("ws://localhost:3000/ws");
+	
+
 	function register() {
-		socket.emit("mode", {
-			"type": "player"
-		});
-	}
-	socket.on("screen", function (s) {
-		document.getElementById("frame").src = s;
-	});
-	socket.on("mode", function (m) {
-		document.getElementById("user").textContent = m.message;
-	});
+		ws.send(JSON.stringify({
+			"type": "mode",
+			"mode": "player"
+		}));
+	};
 	document.addEventListener("keydown", function (event) {
-		socket.emit("keypress", {
-			type: "keydown",
+		if(ws.readyState != 1) return;
+		ws.send(JSON.stringify({
+			type: "keypress",
+			mode: "keydown",
 			code: event.keyCode
-		})
+		}));
 	});
 	document.addEventListener("keyup", function (event) {
-		socket.emit("keypress", {
-			type: "keyup",
+		if(ws.readyState != 1) return;
+		ws.send(JSON.stringify({
+			type: "keypress",
+			mode: "keyup",
 			code: event.keyCode
-		});
+		}));
 	});
 	document.getElementById("monkey").addEventListener("keydown", function (e) {
 		if (e.key == "Enter" && document.getElementById("monkey").value != "" && document.getElementById("monkey").value.length < 255) {
-			socket.emit("message", document.getElementById("monkey").value);
+			ws.send(JSON.stringify({
+				type: "message",
+				message: document.getElementById("monkey").value
+			}));
 			document.getElementById("monkey").value = "";
 		}
 		e.stopImmediatePropagation()
 	});
-	socket.on("message", function (msg) {
-		let mgs = document.getElementById("msgs").textContent.split("\n");
-		mgs.shift();
-		mgs.push(msg);
-		mgs = mgs.join("\n");
-		document.getElementById("msgs").textContent = mgs;
+	ws.onmessage = (function (msg) {
+		let data = JSON.parse(msg.data);
+		if (data.type == "message") {
+			let mgs = document.getElementById("msgs").textContent.split("\n");
+			mgs.shift();
+			mgs.push(data.message);
+			mgs = mgs.join("\n");
+			document.getElementById("msgs").textContent = mgs;
+		}
+		if (data.type == "screen") {
+			document.getElementById("frame").src = data.screen;
+		}
+		if (data.type == "uauthCallback") {
+			document.getElementById("user").textContent = data.message;
+		}
 	});
 </script>

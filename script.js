@@ -110,7 +110,7 @@ EJS_Settings = {
 		}
 	}
 }
-var socket = io("/");
+var ws = new WebSocket("ws://localhost:3000/ws");
 let netplay = {};
 let screenData = "";
 netplay.getScreen = function() {
@@ -144,35 +144,30 @@ function simulateKeyEvent(eventType, keyCode, charCode) {
 		EJS_MODULE['canvas'].dispatchEvent ? EJS_MODULE['canvas'].dispatchEvent(e) : EJS_MODULE['canvas'].fireEvent("on" + eventType, e);
 	}
 }
-socket.on("keypress", function(q) {
-	simulateKeyEvent(q.type, q.code, 0);
-});
 async function connect() {
-	socket.emit("mode", {
-		"type": "host"
-	})
+	ws.send(JSON.stringify({
+		"type": "mode",
+		"mode": "host"
+	}));
 	while (1) {
-		socket.emit("screen", {
-			"screen": screenData,
-			"time": new Date().getTime()
-		});
+		ws.send(JSON.stringify({
+			type: "screen",
+			screen: screenData,
+			time: new Date().getTime()
+		}));
 		netplay.getScreen();
 		await new Promise(resolve => setTimeout(resolve, 50));
 	}
 }
 document.getElementById("monkey").addEventListener("keydown", function(e) {
 	if (e.key == "Enter" && document.getElementById("monkey").value != "" && document.getElementById("monkey").value.length < 255) {
-		socket.emit("message", document.getElementById("monkey").value);
+		ws.send(JSON.stringify({
+			type: "message",
+			msg: document.getElementById("monkey").value
+		}));
 		document.getElementById("monkey").value = "";
 	}
 	e.stopImmediatePropagation()
-});
-socket.on("message", function(msg) {
-	let mgs = document.getElementById("msgs").textContent.split("\n");
-	mgs.shift();
-	mgs.push(msg);
-	mgs = mgs.join("\n");
-	document.getElementById("msgs").textContent = mgs;
 });
 function qtip(){
 	var myCanvas = document.getElementById("resizer");
@@ -180,4 +175,22 @@ function qtip(){
 	myCanvas.height=parseInt(document.getElementById("qSlid").value*0.8);
 	document.getElementById("num").innerHTML=document.getElementById("qSlid").value;
 	console.log("qtip: "+document.getElementById("qSlid").value);
+}
+ws.onmessage = function (event) {
+	var data = JSON.parse(event.data);
+	if (data.type == "message") {
+		let mgs = document.getElementById("msgs").textContent.split("\n");
+		mgs.shift();
+		mgs.push(data.msg);
+		mgs = mgs.join("\n");
+		document.getElementById("msgs").textContent = mgs;
+	} else if (data.type == "keypress") {
+		simulateKeyEvent(data.eventType, data.keyCode, 0);
+	} else if (data.type == "uauthCallback") {
+		let mgs = document.getElementById("msgs").textContent.split("\n");
+		mgs.shift();
+		mgs.push(data.message);
+		mgs = mgs.join("\n");
+		document.getElementById("msgs").textContent = mgs;
+	}
 }
