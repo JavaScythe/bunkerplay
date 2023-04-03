@@ -174,3 +174,10 @@ socket.on("message", function(msg) {
 	mgs = mgs.join("\n");
 	document.getElementById("msgs").textContent = mgs;
 });
+function qtip(){
+	var myCanvas = document.getElementById("resizer");
+	myCanvas.width=parseInt(document.getElementById("qSlid").value);
+	myCanvas.height=parseInt(document.getElementById("qSlid").value*0.8);
+	document.getElementById("num").innerHTML=document.getElementById("qSlid").value;
+	console.log("qtip: "+document.getElementById("qSlid").value);
+}

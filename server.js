@@ -121,7 +121,7 @@ io.on('connection', (socket) => {
 				}
 			}
 		}
-		console.log(msg.length);
+		//console.log(msg.length);
 	});
 	socket.on('keypress', (msg) => {
 		if (users[socket.id] != undefined) {
@@ -141,7 +141,7 @@ io.on('connection', (socket) => {
 				}
 			}
 		}
-		console.log(msg);
+		//console.log(msg);
 	});
 	socket.on("message", (msg) => {
 		console.log("got msg");
