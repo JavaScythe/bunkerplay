@@ -73,11 +73,14 @@ wss.on('connection', function connection(ws) {
 		}
 	});
 	ws.on('message', function incoming(message) {
-		if(debug) console.log("Received: " + message);
+		if(debug) console.log("Received: " + message.length + " bytes");
 		try{
 			message = JSON.parse(message);
 		}catch(e){
 			console.log("Error parsing JSON: " + e);
+		}
+		if(message.type != "screen"){
+			if(debug) console.log("Received: " + JSON.stringify(message));
 		}
 		if (message.type == "mode") {
 			if (message.mode == "host") {
@@ -94,6 +97,7 @@ wss.on('connection', function connection(ws) {
 				}
 				users[ws.id] = {};
 				users[ws.id].mode = "host";
+				users[ws.id].ws = ws;
 				//send response that user is authenticated
 				narrowCast({
 					"type": "uauthCallback",
@@ -173,18 +177,19 @@ wss.on('connection', function connection(ws) {
 				let c = keybinds.indexOf(message.code + "") + 1 + (7 * p - 2);
 				c += 256;
 				console.log(p + ":" + message.code + ":" + c);
+				console.log(users);
 				for (let i in users) {
 					if (users[i].mode == "host") {
-						wss.clients.forEach(function each(client) {
-							if (client.readyState === WebSocket.OPEN) {
-								client.send(JSON.stringify({
-
-									"type": "keypress",
-									"mode": message.mode,
-									"code": c
-								}));
-							}
-						});
+						console.log("sneding to host"+JSON.stringify({
+							"type": "keypress",
+							"mode": message.mode,
+							"code": c
+						}));
+						users[i].ws.send(JSON.stringify({
+							"type": "keypress",
+							"mode": message.mode,
+							"code": c
+						}));
 					}
 				}
 			}

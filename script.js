@@ -163,7 +163,7 @@ document.getElementById("monkey").addEventListener("keydown", function(e) {
 	if (e.key == "Enter" && document.getElementById("monkey").value != "" && document.getElementById("monkey").value.length < 255) {
 		ws.send(JSON.stringify({
 			type: "message",
-			msg: document.getElementById("monkey").value
+			message: document.getElementById("monkey").value
 		}));
 		document.getElementById("monkey").value = "";
 	}
@@ -181,7 +181,7 @@ ws.onmessage = function (event) {
 	if (data.type == "message") {
 		let mgs = document.getElementById("msgs").textContent.split("\n");
 		mgs.shift();
-		mgs.push(data.msg);
+		mgs.push(data.message);
 		mgs = mgs.join("\n");
 		document.getElementById("msgs").textContent = mgs;
 	} else if (data.type == "keypress") {
