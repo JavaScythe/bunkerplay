@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const path = require("path");
 const http = require('http');
+const fs = require("fs");
 const server = http.createServer(app);
 const io = require("socket.io")(server, {
 	cors: {
@@ -15,12 +16,19 @@ const wss = new WebSocket.Server({
 	server: server,
 	path: "/ws"
 });
+let rate = {
+	tx: 0,
+	rx: 0,
+	ltx: 0,
+	lrx: 0
+}
 let debug = true;
 function broadCast(message, ws) {
 	wss.clients.forEach(function each(client) {
 		if (client !== ws && client.readyState === WebSocket.OPEN) {
 			if(debug) console.log("Emitting: " + JSON.stringify(message));
 			client.send(JSON.stringify(message));
+			rate.tx += JSON.stringify(message).length;
 		}
 	});
 };
@@ -29,6 +37,7 @@ function narrowCast(message, ws) {
 		if (client === ws && client.readyState === WebSocket.OPEN) {
 			if(debug) console.log("Emitting: " + JSON.stringify(message));
 			client.send(JSON.stringify(message));
+			rate.tx += JSON.stringify(message).length;
 		}
 	});
 }
@@ -60,6 +69,10 @@ app.get('/', (req, res) => {
 	res.header("Access-Control-Allow-Origin", "*");
 	res.sendFile(path.join(__dirname + "/index.html"));
 });
+app.get("/net", (req, res) => {
+	res.header("Access-Control-Allow-Origin", "*");
+	res.send(fs.readFileSync(__dirname+"/net.html", "utf8").replace("$info$", (rate.lrx/1024).toFixed(2) + " KB/s | " + (rate.ltx/1024).toFixed(2) + " KB/s").replace("$total$", ((rate.ltx+rate.lrx)/1024).toFixed(2) + " KB"));
+});
 app.use((req, res, next) => {
 	res.header("Access-Control-Allow-Origin", "*");
 	res.sendFile(path.join(__dirname + req.path));
@@ -74,6 +87,7 @@ wss.on('connection', function connection(ws) {
 	});
 	ws.on('message', function incoming(message) {
 		if(debug) console.log("Received: " + message.length + " bytes");
+		rate.rx += message.length;
 		try{
 			message = JSON.parse(message);
 		}catch(e){
@@ -153,18 +167,10 @@ wss.on('connection', function connection(ws) {
 					if((new Date().getTime() - message.time) > 200){
 						return false;
 					}
-					for (let i in users) {
-						if (users[i].mode == "player") {
-							wss.clients.forEach(function each(client) {
-								if (client.readyState === WebSocket.OPEN) {
-									client.send(JSON.stringify({
-										"type": "screen",
-										"screen": message.screen
-									}));
-								}
-							});
-						}
-					}
+					broadCast({
+						"type": "screen",
+						"screen": message.screen
+					});
 				}
 			}
 		}
@@ -198,18 +204,20 @@ wss.on('connection', function connection(ws) {
 			if (users[ws.id] != undefined) {
 				let p = users[ws.id].player || "H1";
 				if(p[0]!="H")p="P"+p;
-				wss.clients.forEach(function each(client) {
-					if (client.readyState === WebSocket.OPEN) {
-						client.send(JSON.stringify({
-							"type": "message",
-							"message": "["+p+"] "+message.message
-						}));
-					}
+				broadCast({
+					"type": "message",
+					"message": "["+p+"] "+message.message
 				});
 			}
 		}
 	});
 });
+setInterval(function(){
+	rate.lrx = rate.rx;
+	rate.rx = 0;
+	rate.ltx = rate.tx;
+	rate.tx = 0;
+}, 1000);
 server.listen(3000, () => {
 	console.log('listening on *:3000');
 });
