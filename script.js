@@ -112,14 +112,36 @@ EJS_Settings = {
 }
 var ws = new WebSocket("ws://localhost:3000/ws");
 let netplay = {};
-let screenData = "";
+let screenData = [];
+let screenDelta = {};
+let framespeed = 50;
 netplay.getScreen = function() {
 	var myCanvas = document.getElementById("resizer");
 	var ctx = myCanvas.getContext('2d');
 	var img = new Image;
 	img.onload = function(){
+		//todo: add timings for each major step
+		let deltas = 0;
 		ctx.drawImage(img,0,0,myCanvas.width,myCanvas.height);
-		screenData = myCanvas.toDataURL();
+		let px = ctx.getImageData(0, 0, myCanvas.width, myCanvas.height).data;
+		// data is a single dimension Uint8ClampedArray
+		// 4 bytes per pixel, in RGBA order
+		// 0-3 is the first pixel, 4-7 is the second, etc.
+		// top left is first, bottom right is last
+
+		//compare the pixels and store changed pixels in screenDelta
+		//todo: check any pixels even have different alpha values (maybe not because emujs)
+		screenDelta = {};
+		for(let i=0; i < px.length; i+=4){
+			if(px[i] != screenData[i]){
+				//combine the 4 bytes to a array
+				pixel = [px[i], px[i+1], px[i+2], px[i+3]];
+				screenDelta[i] = px[i];
+				screenData[i] = px[i];
+				deltas++;
+			}
+		}
+		console.log("deltas: " + deltas);
 	};
 	img.src = EJS_MODULE.canvas.toDataURL();
 }
@@ -150,13 +172,21 @@ async function connect() {
 		"mode": "host"
 	}));
 	while (1) {
-		ws.send(JSON.stringify({
-			type: "screen",
-			screen: screenData,
-			time: new Date().getTime()
-		}));
+		if(1 == 1){
+			ws.send(JSON.stringify({
+				type: "screen",
+				screen: screenDelta,
+				time: new Date().getTime()
+			}));
+		} else {
+			ws.send(JSON.stringify({
+				type: "screen",
+				screen: "d",
+				time: new Date().getTime()
+			}));
+		}
 		netplay.getScreen();
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise(resolve => setTimeout(resolve, framespeed));
 	}
 }
 document.getElementById("monkey").addEventListener("keydown", function(e) {
@@ -175,6 +205,10 @@ function qtip(){
 	myCanvas.height=parseInt(document.getElementById("qSlid").value*0.8);
 	document.getElementById("num").innerHTML=document.getElementById("qSlid").value;
 	console.log("qtip: "+document.getElementById("qSlid").value);
+}
+function framerate(){
+	document.getElementById("framerateNum").innerHTML=document.getElementById("framerate").value;
+	framespeed = parseInt(document.getElementById("framerate").value);
 }
 ws.onmessage = function (event) {
 	var data = JSON.parse(event.data);

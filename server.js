@@ -4,17 +4,23 @@ const path = require("path");
 const http = require('http');
 const fs = require("fs");
 const server = http.createServer(app);
-const io = require("socket.io")(server, {
-	cors: {
-		origin: "*",
-		methods: ["GET", "POST"]
-	}
-});
 const WebSocket = require('ws');
+//run "npm install --save-optional bufferutil utf-8-validate" to install performance improvements
 const { randomUUID } = require('crypto');
 const wss = new WebSocket.Server({
 	server: server,
-	path: "/ws"
+	path: "/ws",
+	perMessageDeflate: {
+		zlibDeflateOptions: {
+			chunkSize: 1024,
+			memLevel: 7,
+			level: 3
+		},
+		zlibInflateOptions: {
+			chunkSize: 10 * 1024
+		},
+		concurrencyLimit: 40, // Limits zlib concurrency for perf
+	}
 });
 let rate = {
 	tx: 0,
@@ -26,18 +32,20 @@ let debug = true;
 function broadCast(message, ws) {
 	wss.clients.forEach(function each(client) {
 		if (client !== ws && client.readyState === WebSocket.OPEN) {
-			if(debug) console.log("Emitting: " + JSON.stringify(message));
-			client.send(JSON.stringify(message));
-			rate.tx += JSON.stringify(message).length;
+			//if(debug) console.log("Emitting: " + JSON.stringify(message));
+			let msg = JSON.stringify(message);
+			client.send(msg);
+			rate.tx += msg.length;
 		}
 	});
 };
 function narrowCast(message, ws) {
 	wss.clients.forEach(function each(client) {
 		if (client === ws && client.readyState === WebSocket.OPEN) {
-			if(debug) console.log("Emitting: " + JSON.stringify(message));
-			client.send(JSON.stringify(message));
-			rate.tx += JSON.stringify(message).length;
+			//if(debug) console.log("Emitting: " + JSON.stringify(message));
+			let msg = JSON.stringify(message);
+			client.send(msg);
+			rate.tx += msg.length;
 		}
 	});
 }
@@ -165,11 +173,16 @@ wss.on('connection', function connection(ws) {
 			if (users[ws.id] != undefined) {
 				if (users[ws.id].mode == "host") {
 					if((new Date().getTime() - message.time) > 200){
+						console.log("dropped frame");
+						broadCast({
+							"type": "drop"
+						});
 						return false;
 					}
 					broadCast({
 						"type": "screen",
-						"screen": message.screen
+						"screen": message.screen,
+						"time": message.time
 					});
 				}
 			}
