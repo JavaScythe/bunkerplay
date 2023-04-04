@@ -172,7 +172,7 @@ wss.on('connection', function connection(ws) {
 		if (message.type == "screen") {
 			if (users[ws.id] != undefined) {
 				if (users[ws.id].mode == "host") {
-					if((new Date().getTime() - message.time) > 200){
+					if((new Date().getTime() - message.time) > 999999){
 						console.log("dropped frame");
 						broadCast({
 							"type": "drop"

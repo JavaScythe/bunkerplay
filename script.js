@@ -128,20 +128,24 @@ netplay.getScreen = function() {
 		// 4 bytes per pixel, in RGBA order
 		// 0-3 is the first pixel, 4-7 is the second, etc.
 		// top left is first, bottom right is last
-
 		//compare the pixels and store changed pixels in screenDelta
+		// screendelta sample format: {0: [0,0,0,0], 1: [0,0,0,0], 2: [0,0,0,0]}
+
 		//todo: check any pixels even have different alpha values (maybe not because emujs)
+		let start = new Date().getTime();
 		screenDelta = {};
-		for(let i=0; i < px.length; i+=4){
-			if(px[i] != screenData[i]){
-				//combine the 4 bytes to a array
-				pixel = [px[i], px[i+1], px[i+2], px[i+3]];
-				screenDelta[i] = px[i];
-				screenData[i] = px[i];
+		for (let i = 0; i < px.length; i += 4) {
+			let p = [px[i], px[i+1], px[i+2], px[i+3]];
+			if (screenData[i] !== p[0] || screenData[i+1] !== p[1] || screenData[i+2] !== p[2] || screenData[i+3] !== p[3]) {
+				screenDelta[i] = p;
+				screenData[i] = p[0];
+				screenData[i+1] = p[1];
+				screenData[i+2] = p[2];
+				screenData[i+3] = p[3];
 				deltas++;
 			}
 		}
-		console.log("deltas: " + deltas);
+		console.log("deltas: " + deltas + " time: " + (new Date().getTime() - start));
 	};
 	img.src = EJS_MODULE.canvas.toDataURL();
 }

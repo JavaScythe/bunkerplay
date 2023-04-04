@@ -1,4 +1,4 @@
-<img src="" id="frame" height="480px" width="600px">
+<canvas id="frame" height="480px" width="600px"></canvas>
 <pre id="user"></pre>
 <button onclick="register();">connect to game</button>
 <pre id="msgs">
@@ -15,7 +15,7 @@
 	var ws = new WebSocket("ws://localhost:3000/ws");
 	let frames = 0;
 	let drop = 0;
-	let screenData = [];
+	let screenData = new Uint8ClampedArray(600*480*4);
 	setInterval(function () {
 		document.getElementById("info_frames").textContent = frames+"fps";
 		frames = 0;
@@ -63,7 +63,23 @@
 			document.getElementById("msgs").textContent = mgs;
 		}
 		if (data.type == "screen") {
-			document.getElementById("frame").src = data.screen;
+			let deltas = 0;
+			let start = new Date().getTime();
+			for(let i in data.screen) {
+				i = parseInt(i);
+				screenData[i] = data.screen[i][0];
+				screenData[i+1] = data.screen[i][1];
+				screenData[i+2] = data.screen[i][2];
+				screenData[i+3] = data.screen[i][3];
+				deltas++;
+			}
+			console.log("deltas: "+deltas+" in "+(new Date().getTime()-start)+"ms");
+			let frame = document.getElementById("frame");
+			let ctx = frame.getContext("2d");
+			let imgData = ctx.createImageData(600, 480);
+			console.log("wle "+screenData.length+" "+	(600*480*4));
+			imgData.data.set(screenData);
+			ctx.putImageData(imgData, 0, 0);
 			frames++;
 			document.getElementById("info_time").textContent = (new Date().getTime()-data.time)+"ms";
 		}
