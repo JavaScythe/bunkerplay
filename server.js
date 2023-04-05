@@ -79,7 +79,7 @@ app.get('/', (req, res) => {
 });
 app.get("/net", (req, res) => {
 	res.header("Access-Control-Allow-Origin", "*");
-	res.send(fs.readFileSync(__dirname+"/net.html", "utf8").replace("$info$", (rate.lrx/1024).toFixed(2) + " KB/s | " + (rate.ltx/1024).toFixed(2) + " KB/s").replace("$total$", ((rate.ltx+rate.lrx)/1024).toFixed(2) + " KB"));
+	res.send(fs.readFileSync(__dirname + "/net.html", "utf8").replace("$info$", (rate.lrx / 1024).toFixed(2) + " KB/s | " + (rate.ltx / 1024).toFixed(2) + " KB/s").replace("$total$", ((rate.ltx + rate.lrx) / 1024).toFixed(2) + " KB"));
 });
 app.use((req, res, next) => {
 	res.header("Access-Control-Allow-Origin", "*");
@@ -87,22 +87,22 @@ app.use((req, res, next) => {
 });
 wss.on('connection', function connection(ws) {
 	ws.id = randomUUID();
-	if(debug) console.log("New connection: " + ws.id);
-	ws.on("close", function close(){
-		if(users[ws.id] != undefined){
+	if (debug) console.log("New connection: " + ws.id);
+	ws.on("close", function close() {
+		if (users[ws.id] != undefined) {
 			delete users[ws.id];
 		}
 	});
 	ws.on('message', function incoming(message) {
-		if(debug) console.log("Received: " + message.length + " bytes");
+		if (debug) console.log("Received: " + message.length + " bytes");
 		rate.rx += message.length;
-		try{
+		try {
 			message = JSON.parse(message);
-		}catch(e){
+		} catch (e) {
 			console.log("Error parsing JSON: " + e);
 		}
-		if(message.type != "screen"){
-			if(debug) console.log("Received: " + JSON.stringify(message));
+		if (message.type != "screen") {
+			if (debug) console.log("Received: " + JSON.stringify(message));
 		}
 		if (message.type == "mode") {
 			if (message.mode == "host") {
@@ -172,7 +172,7 @@ wss.on('connection', function connection(ws) {
 		if (message.type == "screen") {
 			if (users[ws.id] != undefined) {
 				if (users[ws.id].mode == "host") {
-					if((new Date().getTime() - message.time) > 999999){
+					if ((new Date().getTime() - message.time) > 200) {
 						console.log("dropped frame");
 						broadCast({
 							"type": "drop"
@@ -182,7 +182,8 @@ wss.on('connection', function connection(ws) {
 					broadCast({
 						"type": "screen",
 						"screen": message.screen,
-						"time": message.time
+						"time": message.time,
+						"screenType": message.screenType
 					});
 				}
 			}
@@ -199,7 +200,7 @@ wss.on('connection', function connection(ws) {
 				console.log(users);
 				for (let i in users) {
 					if (users[i].mode == "host") {
-						console.log("sneding to host"+JSON.stringify({
+						console.log("sneding to host" + JSON.stringify({
 							"type": "keypress",
 							"mode": message.mode,
 							"code": c
@@ -216,16 +217,16 @@ wss.on('connection', function connection(ws) {
 		if (message.type == "message") {
 			if (users[ws.id] != undefined) {
 				let p = users[ws.id].player || "H1";
-				if(p[0]!="H")p="P"+p;
+				if (p[0] != "H") p = "P" + p;
 				broadCast({
 					"type": "message",
-					"message": "["+p+"] "+message.message
+					"message": "[" + p + "] " + message.message
 				});
 			}
 		}
 	});
 });
-setInterval(function(){
+setInterval(function () {
 	rate.lrx = rate.rx;
 	rate.rx = 0;
 	rate.ltx = rate.tx;

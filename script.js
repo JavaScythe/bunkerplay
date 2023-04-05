@@ -114,16 +114,33 @@ var ws = new WebSocket("ws://localhost:3000/ws");
 let netplay = {};
 let screenData = [];
 let screenDelta = {};
-let framespeed = 50;
+let screenType = "delta";
+let frameBlock = false;
+let framespeed = 2000;
+let first = true;
+let resolution = {
+	x: 600,
+	y: 480
+};
 netplay.getScreen = function() {
+	if(frameBlock){
+		return false;
+	}
 	var myCanvas = document.getElementById("resizer");
-	var ctx = myCanvas.getContext('2d');
+	var ctx = myCanvas.getContext('2d', { willReadFrequently: true });
 	var img = new Image;
 	img.onload = function(){
 		//todo: add timings for each major step
 		let deltas = 0;
+		myCanvas.width = resolution.x;
+		myCanvas.height = resolution.y;
 		ctx.drawImage(img,0,0,myCanvas.width,myCanvas.height);
 		let px = ctx.getImageData(0, 0, myCanvas.width, myCanvas.height).data;
+		if(first){
+			screenData = px;
+			first = false;
+			return false;
+		}
 		// data is a single dimension Uint8ClampedArray
 		// 4 bytes per pixel, in RGBA order
 		// 0-3 is the first pixel, 4-7 is the second, etc.
@@ -134,18 +151,104 @@ netplay.getScreen = function() {
 		//todo: check any pixels even have different alpha values (maybe not because emujs)
 		let start = new Date().getTime();
 		screenDelta = {};
-		for (let i = 0; i < px.length; i += 4) {
-			let p = [px[i], px[i+1], px[i+2], px[i+3]];
-			if (screenData[i] !== p[0] || screenData[i+1] !== p[1] || screenData[i+2] !== p[2] || screenData[i+3] !== p[3]) {
-				screenDelta[i] = p;
-				screenData[i] = p[0];
-				screenData[i+1] = p[1];
-				screenData[i+2] = p[2];
-				screenData[i+3] = p[3];
-				deltas++;
+		let i = 0, l = px.length;
+		//dynamic chunking: start with checking 100 pixels at a time, if it doesn't match then check 10 pixels at a time, if it doesn't match then check 1 pixel at a time
+		let chunkSize = 5000;
+		let rawAttempts = 0;
+		while(i < l){
+			debugger;
+			rawAttempts++;
+			//console.log("start index"+ i+" end index "+ (i+(chunkSize*4))+" chunkSize: "+chunkSize+" rawAttempts: "+rawAttempts);
+			if(px.slice(i, i+(chunkSize*4)).join("") === screenData.slice(i, i+(chunkSize*4)).join("")){
+				//console.log("good "+chunkSize+" chunk at "+i+" (rawAttempts: "+rawAttempts);
+				i += chunkSize*4;
+				if(chunkSize === 1){
+					chunkSize = 10;
+					continue;
+				}else if(chunkSize === 10){
+					chunkSize = 25;
+					continue;
+				}else if(chunkSize === 25){
+					chunkSize = 50;
+					continue;
+				}else if(chunkSize === 50){
+					chunkSize = 100;
+					continue;
+				} else if(chunkSize === 100){
+					chunkSize = 500;
+					continue;
+				} else if(chunkSize === 500){
+					chunkSize = 1000;
+					continue;
+				} else if(chunkSize === 1000){
+					chunkSize = 5000;
+					continue;
+				}
+			}else{
+				if(chunkSize === 5000){
+					chunkSize = 1000;
+					continue;
+				}else if(chunkSize === 1000){
+					chunkSize = 500;
+					continue;
+				}else if(chunkSize === 500){
+					chunkSize = 100;
+					continue;
+				}else if(chunkSize === 100){
+					chunkSize = 50;
+					continue;
+				}else if(chunkSize === 50){
+					chunkSize = 25;
+					continue;
+				}else if(chunkSize === 25){
+					chunkSize = 10;
+					continue;
+				}else if(chunkSize === 10){
+					chunkSize = 1;
+					continue;
+				}else if(chunkSize === 1){
+					//this pixel (i) is bad
+					let localStart = new Date().getTime();
+					let p = [px[i], px[i+1], px[i+2], px[i+3]];
+					for(let i in p){
+						p[i] = parseInt(p[i]);
+					};
+					screenDelta += i+":";
+					screenDelta += (function(p){
+						let x = "";
+						for(let i in p){
+							//preprend 0s to make at least 3 digits
+							let s = p[i].toString();
+							while(s.length < 3){
+								s = "0"+s;
+							}
+							x += s;
+						}
+						return x;
+					})(p);
+					screenDelta += ";";
+					screenData[i] = p[0];
+					screenData[i+1] = p[1];
+					screenData[i+2] = p[2];
+					screenData[i+3] = p[3];
+					deltas++;
+					//console.log("delta time: " + (new Date().getTime() - localStart));
+					i += 4;
+				}
 			}
+			//the above code generates more deltas than pixels because 
+			//screen delta sample format: 0:000000000;1:0000000000000;2:000000000;
 		}
-		console.log("deltas: " + deltas + " time: " + (new Date().getTime() - start));
+		console.log("frame calculated in "+rawAttempts+" attempts");
+		console.log("deltapercent"+(deltas/(resolution.x*resolution.y)));
+		screenType = "delta";
+		if((deltas/(resolution.x*resolution.y)) > 0.4){
+			screenDelta = myCanvas.toDataURL();
+			screenType = "full";
+			console.log("SENDING FULL SCREEN");
+			frameBlock = true;
+		}
+		console.log("deltas: " + deltas + " time: " + (new Date().getTime() - start)+" size:"+screenDelta.length);
 	};
 	img.src = EJS_MODULE.canvas.toDataURL();
 }
@@ -177,15 +280,22 @@ async function connect() {
 	}));
 	while (1) {
 		if(1 == 1){
-			ws.send(JSON.stringify({
-				type: "screen",
-				screen: screenDelta,
-				time: new Date().getTime()
-			}));
+			console.log("sending screen", screenType);
+			if(Object.keys(screenDelta).length > 0 || screenType == "full"){
+				ws.send(JSON.stringify({
+					type: "screen",
+					screen: screenDelta,
+					screenType: screenType,
+					time: new Date().getTime()
+				}));
+				frameBlock=false;
+				screenDelta = {};
+			}
 		} else {
 			ws.send(JSON.stringify({
 				type: "screen",
 				screen: "d",
+				screenType: screenType,
 				time: new Date().getTime()
 			}));
 		}

@@ -15,6 +15,7 @@
 	var ws = new WebSocket("ws://localhost:3000/ws");
 	let frames = 0;
 	let drop = 0;
+	let screenOps = 0;
 	let screenData = new Uint8ClampedArray(600*480*4);
 	setInterval(function () {
 		document.getElementById("info_frames").textContent = frames+"fps";
@@ -63,25 +64,59 @@
 			document.getElementById("msgs").textContent = mgs;
 		}
 		if (data.type == "screen") {
+			screenOps++;
+			console.log("screen operation began n:"+screenOps);
+			if(screenOps > 1){
+				screenOps--;
+				console.log("screen operation dropped n:"+screenOps);
+				return;
+			}
+			if(data.screenType == "full"){
+				console.log("LOADING FULL SCREEN");
+				let image = new Image();
+				image.onload = function(){
+					let frame = document.getElementById("frame");
+					let ctx = frame.getContext("2d");
+					ctx.drawImage(image, 0, 0);
+					screenData = ctx.getImageData(0, 0, 600, 480).data;
+				}
+				image.src = data.screen;
+				screenOps--;
+				return true;
+			}
 			let deltas = 0;
 			let start = new Date().getTime();
-			for(let i in data.screen) {
-				i = parseInt(i);
-				screenData[i] = data.screen[i][0];
-				screenData[i+1] = data.screen[i][1];
-				screenData[i+2] = data.screen[i][2];
-				screenData[i+3] = data.screen[i][3];
+			let px = data.screen.split(";");
+			px.pop();
+			//console.log(px.length+"pixels changed");
+			let delta = {};
+			for(let i in px){
+				let index = parseInt(px[i].split(":")[0]);
+				//split string into 3 digit blocks
+				let data = (function(p){
+					let x = [];
+					for(let i = 0; i < p.length; i+=3){
+						x.push(p.substr(i, 3));
+					}
+					return x;
+				})(px[i].split(":")[1]);
+				screenData[index] = data[0];
+				screenData[index+1] = data[1];
+				screenData[index+2] = data[2];
+				screenData[index+3] = data[3];
+				
 				deltas++;
 			}
-			console.log("deltas: "+deltas+" in "+(new Date().getTime()-start)+"ms");
+			//console.log("deltas: "+deltas+" in "+(new Date().getTime()-start)+"ms");
 			let frame = document.getElementById("frame");
 			let ctx = frame.getContext("2d");
 			let imgData = ctx.createImageData(600, 480);
-			console.log("wle "+screenData.length+" "+	(600*480*4));
 			imgData.data.set(screenData);
 			ctx.putImageData(imgData, 0, 0);
 			frames++;
 			document.getElementById("info_time").textContent = (new Date().getTime()-data.time)+"ms";
+			screenOps--;
+			console.log("screen operation ended n:"+screenOps);
 		}
 		if (data.type == "uauthCallback") {
 			document.getElementById("user").textContent = data.message;
