@@ -111,39 +111,56 @@ EJS_Settings = {
 	}
 }
 var ws = new WebSocket("ws://localhost:3000/ws");
+let worker = new Worker("calc.js");
 let netplay = {};
 let screenData = [];
 let screenDelta = {};
-let framespeed = 50;
+let screenType = "delta";
+let frameBlock = false;
+let framespeed = 2000;
+let first = true;
+let resolution = {
+	x: 600,
+	y: 480
+};
+var myCanvas = document.getElementById("resizer");
+var ctx = myCanvas.getContext('2d', { willReadFrequently: true });
 netplay.getScreen = function() {
-	var myCanvas = document.getElementById("resizer");
-	var ctx = myCanvas.getContext('2d');
+	if(frameBlock){
+		return false;
+	}
 	var img = new Image;
 	img.onload = function(){
 		//todo: add timings for each major step
-		let deltas = 0;
+		myCanvas.width = resolution.x;
+		myCanvas.height = resolution.y;
 		ctx.drawImage(img,0,0,myCanvas.width,myCanvas.height);
 		let px = ctx.getImageData(0, 0, myCanvas.width, myCanvas.height).data;
-		// data is a single dimension Uint8ClampedArray
-		// 4 bytes per pixel, in RGBA order
-		// 0-3 is the first pixel, 4-7 is the second, etc.
-		// top left is first, bottom right is last
-
-		//compare the pixels and store changed pixels in screenDelta
-		//todo: check any pixels even have different alpha values (maybe not because emujs)
-		screenDelta = {};
-		for(let i=0; i < px.length; i+=4){
-			if(px[i] != screenData[i]){
-				//combine the 4 bytes to a array
-				pixel = [px[i], px[i+1], px[i+2], px[i+3]];
-				screenDelta[i] = px[i];
-				screenData[i] = px[i];
-				deltas++;
-			}
+		if(first){
+			screenData = px;
+			first = false;
+			worker.postMessage({
+				type: "screen",
+				px: px
+			});
+			return false;
+		} else {
+			//send to worker
+			worker.postMessage({
+				type: "calc",
+				px: px
+			});
 		}
-		console.log("deltas: " + deltas);
 	};
 	img.src = EJS_MODULE.canvas.toDataURL();
+}
+worker.onmessage = function(e) {
+	screenDelta = e.data.screenDelta;
+	screenType = e.data.screenType;
+	frameBlock = e.data.frameBlock;
+	if(screenType == "full"){
+		screenDelta = myCanvas.toDataURL();
+	}
 }
 function simulateKeyEvent(eventType, keyCode, charCode) {
 	var e = document.createEventObject ? document.createEventObject() : document.createEvent("Events");
@@ -173,15 +190,22 @@ async function connect() {
 	}));
 	while (1) {
 		if(1 == 1){
-			ws.send(JSON.stringify({
-				type: "screen",
-				screen: screenDelta,
-				time: new Date().getTime()
-			}));
+			console.log("sending screen", screenType);
+			if(Object.keys(screenDelta).length > 0 || screenType == "full"){
+				ws.send(JSON.stringify({
+					type: "screen",
+					screen: screenDelta,
+					screenType: screenType,
+					time: new Date().getTime()
+				}));
+				frameBlock=false;
+				screenDelta = {};
+			}
 		} else {
 			ws.send(JSON.stringify({
 				type: "screen",
 				screen: "d",
+				screenType: screenType,
 				time: new Date().getTime()
 			}));
 		}

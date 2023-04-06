@@ -25,26 +25,9 @@
 		<input class="input-box" tabindex="1" type="horrible" id="monkey" />
 	</div>
 </div>
-    <button class="button-red" onclick="connect();">Connect</button>
-	<input
-		  type="range"
-		  min="100"
-		  max="800"
-		  id="qSlid"
-		  value="300"
-		  onchange="qtip();"
-		/>
-    <pre style="display: inline-block; color:white;" id="num">300</pre>
-    <input
-      id="framerate"
-      type="range"
-      min="1"
-      max="100"
-      value="50"
-      onchange="framerate();"
-    />
-    <pre style="display: inline-block; color:white;" id="framerateNum">30</pre>
-  </body>
-  <script src="script.js"></script>
-  <script src="/data/loader.js"></script>
-</html>
+<button onclick="connect();">Connect</button>
+
+<input type="range" min="100" max="800" id="qSlid" value="300" onchange="qtip();"><pre style="display: inline-block; color:white;" id="num">300</pre>
+<input id="framerate" type="range" min="1" max="2000" value="50" onchange="framerate();"><pre style="display: inline-block; color:white;" id="framerateNum">30</pre>
+<script src="script.js"></script>
+<script src="/data/loader.js"></script>
