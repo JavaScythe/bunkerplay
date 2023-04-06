@@ -1,11 +1,11 @@
-if(!window.Worker){
-	alert("worker failure");
-	throw "worker failure";
-}
-let screenData = [];
+let resolution = {
+	x: 600,
+	y: 480
+};
+let screenData = new Uint8ClampedArray(600*480);
 onmessage = (e) => {
 	if(e.data.type == "screen"){
-		screenData = e.data.screen;
+		screenData = e.data.px;
 		return;
 	} else if(e.data.type == "calc"){
 		let px = e.data.px;

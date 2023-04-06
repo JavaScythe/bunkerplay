@@ -123,12 +123,12 @@ let resolution = {
 	x: 600,
 	y: 480
 };
+var myCanvas = document.getElementById("resizer");
+var ctx = myCanvas.getContext('2d', { willReadFrequently: true });
 netplay.getScreen = function() {
 	if(frameBlock){
 		return false;
 	}
-	var myCanvas = document.getElementById("resizer");
-	var ctx = myCanvas.getContext('2d', { willReadFrequently: true });
 	var img = new Image;
 	img.onload = function(){
 		//todo: add timings for each major step
@@ -141,14 +141,14 @@ netplay.getScreen = function() {
 			first = false;
 			worker.postMessage({
 				type: "screen",
-				screen: px
+				px: px
 			});
 			return false;
 		} else {
 			//send to worker
 			worker.postMessage({
 				type: "calc",
-				data: px
+				px: px
 			});
 		}
 	};
