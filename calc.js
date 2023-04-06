@@ -2,7 +2,7 @@ let resolution = {
 	x: 600,
 	y: 480
 };
-let screenData = new Uint8ClampedArray(600*480);
+let screenData = new Uint8ClampedArray(480*600*4);
 onmessage = (e) => {
 	if(e.data.type == "screen"){
 		screenData = e.data.px;

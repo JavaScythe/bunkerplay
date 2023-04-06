@@ -169,7 +169,7 @@ function simulateKeyEvent(eventType, keyCode, charCode) {
 	e.keyCode = keyCode;
 	e.which = keyCode;
 	e.charCode = charCode;
-
+	console.log("key event: " + eventType + " " + keyCode + " " + charCode)
 	// Dispatch directly to Emscripten's html5.h API (use this if page uses emscripten/html5.h event handling):
 	if (typeof JSEvents !== 'undefined' && JSEvents.eventHandlers && JSEvents.eventHandlers.length > 0) {
 		for (var i = 0; i < JSEvents.eventHandlers.length; ++i) {
@@ -248,7 +248,8 @@ ws.onmessage = function (event) {
 			document.getElementById("msgs").textContent = document.getElementById("msgs").textContent.slice(0, 250);
 		}
 	} else if (data.type == "keypress") {
-		simulateKeyEvent(data.eventType, data.keyCode, 0);
+		console.log(data);
+		simulateKeyEvent(data.mode, data.code, 0);
 	} else if (data.type == "uauthCallback") {
 		let mgs = document.getElementById("msgs").textContent.split("\n");
 		mgs.shift();
