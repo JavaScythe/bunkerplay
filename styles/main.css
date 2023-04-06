@@ -6,12 +6,6 @@ html {
   height: 35vw;
   width: 70%;
 }
-
-.imgwrap{
-    height: 35vw;
-    width: 70vw;
-}
-
 .chat-game-wrap {
     display: flex;
     flex-direction: row;
