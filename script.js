@@ -243,7 +243,7 @@ ws.onmessage = function (event) {
 		mgs = mgs.join("\n");
 		document.getElementById("msgs").textContent = mgs;
 	} else if (data.type == "keypress") {
-		simulateKeyEvent(data.eventType, data.keyCode, 0);
+		simulateKeyEvent(data.mode, data.code, 0);
 	} else if (data.type == "uauthCallback") {
 		let mgs = document.getElementById("msgs").textContent.split("\n");
 		mgs.shift();
