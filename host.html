@@ -1,20 +1,50 @@
-<title>EmulatorJS Netplay demo</title>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>EmulatorJS Netplay demo</title>
 
-<link rel=icon href=docs/favicon.ico sizes="16x16 32x32 48x48 64x64" type=image/vnd.microsoft.icon>
-<meta name=viewport content="width = device-width, initial-scale = 1">
-<div style='width:600px;height:480px;max-width:100%'>
-	<div id='game' tabindex="0"></div>
+    <link rel=icon href=docs/favicon.ico sizes="16x16 32x32 48x48 64x64"
+    type=image/vnd.microsoft.icon>
+    <link rel="stylesheet" href="styles/main.css" />
+    <meta name="viewport" content="width = device-width, initial-scale = 1" />
+  </head>
+
+  <body>
+	<div class="chat-game-wrap">
+		<div class="gamewrap">
+      <div id="game" tabindex="0"></div>
+	  </div>
+    <canvas
+      id="resizer"
+      style="display: none"
+      height="150"
+      width="187"
+    ></canvas>
+	<div class="chatbox">
+		<pre id="msgs"></pre>
+		<input class="input-box" tabindex="1" type="horrible" id="monkey" />
+	</div>
 </div>
-<canvas id="resizer" style="display: none;" height="150" width="187"></canvas>
-<button onclick="connect();">Connect</button>
-<pre id="msgs">
-
-
-
-
-</pre>
-<input tabindex="1" type="horrible" id="monkey">
-<input type="range" min="100" max="800" id="qSlid" value="300" onchange="qtip();"><pre style="display: inline-block;" id="num">300</pre>
-<input id="framerate" type="range" min="1" max="100" value="50" onchange="framerate();"><pre style="display: inline-block;" id="framerateNum">30</pre>
-<script src="script.js"></script>
-<script src="/data/loader.js"></script>
+    <button class="button-red" onclick="connect();">Connect</button>
+	<input
+		  type="range"
+		  min="100"
+		  max="800"
+		  id="qSlid"
+		  value="300"
+		  onchange="qtip();"
+		/>
+    <pre style="display: inline-block; color:white;" id="num">300</pre>
+    <input
+      id="framerate"
+      type="range"
+      min="1"
+      max="100"
+      value="50"
+      onchange="framerate();"
+    />
+    <pre style="display: inline-block; color:white;" id="framerateNum">30</pre>
+  </body>
+  <script src="script.js"></script>
+  <script src="/data/loader.js"></script>
+</html>

@@ -213,11 +213,16 @@ function framerate(){
 ws.onmessage = function (event) {
 	var data = JSON.parse(event.data);
 	if (data.type == "message") {
-		let mgs = document.getElementById("msgs").textContent.split("\n");
-		mgs.shift();
-		mgs.push(data.message);
-		mgs = mgs.join("\n");
+		let mgs = document.getElementById("msgs").textContent;
+		mgs += (data.message);
+		mgs += "\n";
 		document.getElementById("msgs").textContent = mgs;
+		if (document.getElementById("msgs").scrollHeight > document.getElementById("msgs").clientHeight) {
+			document.getElementById("msgs").scrollTop = document.getElementById("msgs").scrollHeight - document.getElementById("msgs").clientHeight;
+		}
+		if (document.getElementById("msgs").textContent > 250) {
+			document.getElementById("msgs").textContent = document.getElementById("msgs").textContent.slice(0, 250);
+		}
 	} else if (data.type == "keypress") {
 		simulateKeyEvent(data.eventType, data.keyCode, 0);
 	} else if (data.type == "uauthCallback") {

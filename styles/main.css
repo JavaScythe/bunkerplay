@@ -1,0 +1,60 @@
+html {
+  background-color: #000;
+}
+
+.gamewrap {
+  height: 35vw;
+  width: 70%;
+}
+
+.imgwrap{
+    height: 35vw;
+    width: 70vw;
+}
+
+.chat-game-wrap {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+.button-red {
+  background: #5eb568;
+  border: 5px solid #3a3a3a;
+  border-radius: 7px;
+  width: 8vw;
+  height: 4vw;
+  font-size: 1vw;
+  font-weight: bold;
+  margin-top: 5vh;
+}
+
+.button-red:hover {
+  filter: brightness(1.2);
+  transform: scale(1.03);
+}
+
+.chatbox {
+    background-color: rgb(92, 92, 92);
+    width: 25%;
+    display: flex;
+    flex-direction: column;
+    height: 35vw;
+}
+
+.input-box {
+    background-color: rgb(71, 71, 71);
+    width: 90%;
+    height: 5vh;
+    color: white;
+    margin-top: auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#msgs {
+    margin-top: 2vh;
+    height: auto;
+    overflow-y: auto;
+    color: white;
+}
