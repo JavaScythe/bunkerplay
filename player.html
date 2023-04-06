@@ -21,7 +21,7 @@
     <pre style="color:white;" id="info_time">0</pre>
     <pre style="color:white;" id="info_drop">0 dropped</pre>
   </body>
-<script>
+  <script>
 	var ws = new WebSocket("ws://localhost:3000/ws");
 	let frames = 0;
 	let drop = 0;
@@ -62,8 +62,21 @@
 			}));
 			document.getElementById("monkey").value = "";
 		}
+		e.stopImmediatePropagation()
+	});
+	ws.onmessage = (function (msg) {
+		let data = JSON.parse(msg.data);
+		if (data.type == "message") {
+			let mgs = document.getElementById("msgs").textContent;
+		mgs += (data.message);
+		mgs += "\n";
+		document.getElementById("msgs").textContent = mgs;
+		if (document.getElementById("msgs").scrollHeight > document.getElementById("msgs").clientHeight) {
+			document.getElementById("msgs").scrollTop = document.getElementById("msgs").scrollHeight - document.getElementById("msgs").clientHeight;
+		}
 		if (document.getElementById("msgs").textContent > 250) {
 			document.getElementById("msgs").textContent = document.getElementById("msgs").textContent.slice(0, 250);
+		}
 		}
 		if (data.type == "screen") {
 			screenOps++;
