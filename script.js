@@ -158,6 +158,9 @@ worker.onmessage = function(e) {
 	screenDelta = e.data.screenDelta;
 	screenType = e.data.screenType;
 	frameBlock = e.data.frameBlock;
+	if(screenType == "full"){
+		screenDelta = myCanvas.toDataURL();
+	}
 }
 function simulateKeyEvent(eventType, keyCode, charCode) {
 	var e = document.createEventObject ? document.createEventObject() : document.createEvent("Events");

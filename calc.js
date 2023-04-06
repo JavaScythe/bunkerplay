@@ -106,7 +106,6 @@ onmessage = (e) => {
 		console.log("deltapercent"+(deltas/(resolution.x*resolution.y)));
 		screenType = "delta";
 		if((deltas/(resolution.x*resolution.y)) > 0.4){
-			screenDelta = myCanvas.toDataURL();
 			screenType = "full";
 			console.log("SENDING FULL SCREEN");
 			frameBlock = true;
