@@ -1,1 +1,0 @@
-this might die but maybe ill switch delta calculations to server
