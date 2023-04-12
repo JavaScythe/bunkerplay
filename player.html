@@ -56,6 +56,7 @@
 	});
 	ws.onmessage = (function (msg) {
 		let data = JSON.parse(msg.data);
+		console.log("received: "+data.type);
 		if (data.type == "message") {
 			let mgs = document.getElementById("msgs").textContent.split("\n");
 			mgs.shift();
